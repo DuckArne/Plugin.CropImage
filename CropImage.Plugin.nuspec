@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
 	<metadata minClientVersion="2.8.3">
 		<id>Plugin.CropImage</id>
-		<version>1.0.7-pre</version>
+		<version>1.0.8-pre</version>
 		<title>CropImage Plugin for Xamarin and Windows</title>
 		<authors>Mats Andersson</authors>
 		<owners>Mats Andersson</owners>

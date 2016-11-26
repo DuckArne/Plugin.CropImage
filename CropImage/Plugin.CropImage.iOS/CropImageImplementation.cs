@@ -16,12 +16,22 @@ namespace Plugin.CropImage
     public class CropImageImplementation : ICropImage
     {
 
-
-        async public Task<string> CropImage(string originalSourcePath, BoundingBox boundingBoxToCrop, int newWidth, int newHeight, string addToFilename)
+        /// <summary>
+        /// Crops an image by the BoundingBox and returns in the size you specify.
+        /// The new image will be saved on the device.
+        /// </summary>
+        /// <param name="originalSourcePath">The original SourcePath to a file on Device</param>
+        /// <param name="boundingBox">The image box that will be used to crop</param>
+        /// <param name="width">Width of the cropped image</param>
+        /// <param name="height">Height of the cropped image</param>
+        /// <param name="addToFilename">What string should be after the originalSourcePath. if original is img20161203.jpg and addToFileName is -thumbnail then the outcome will be img20161203-thumbnail.jpg</param>
+        ///  /// <param name="removeFromOriginalSourceFilename">a string that should be removed from original source ex. originalSourcepath = "Image-fullImage.jpg"  removeFromOriginalSourceFilename = "-fullImage" the resulting path string will be "Image"+"addToFilename+".jpg"</param> 
+        /// <returns>The path to the cropped image</returns>
+       async public Task<string> CropImage(string originalSourcePath, BoundingBox boundingBox, int width, int height, string addToFilename, string removeFromOriginalSourceFilename = null)
         {
             string newPath = null;
 
-
+            await Task.Run(()=>{ 
             byte[] originalImage = File.ReadAllBytes(originalSourcePath);
             var image = ImageResizer.ImageFromByteArray(originalImage);
 
@@ -30,13 +40,13 @@ namespace Plugin.CropImage
             CGPoint offset;
 
             //make a new square size, that is the resized imaged width
-            CGSize sz = new CGSize(newWidth, newHeight);
+            CGSize sz = new CGSize(width, height);
 
 
 
-            ratio = newWidth / image.Size.Width;
+            ratio = width / image.Size.Width;
             delta = (ratio * image.Size.Width - ratio * image.Size.Height);
-            offset = new CGPoint(boundingBoxToCrop.Left, boundingBoxToCrop.Top);
+            offset = new CGPoint(boundingBox.Left, boundingBox.Top);
 
 
 
@@ -68,7 +78,7 @@ namespace Plugin.CropImage
 
             newPath = originalSourcePath.Replace(extension, addToFilename + extension);
             File.WriteAllBytes(newPath, bytes);
-
+            });
 
 
             return newPath;
@@ -76,8 +86,18 @@ namespace Plugin.CropImage
         }
 
 
-
-        async public Task<string> CropImageFace(string originalSourcePath, int width, int height, string addToFilename, int extraAroundFaceRectangle = 30)
+        /// <summary>
+        /// Crops an Image around faces, if there are any.
+        /// Remember to check internet connectivity otherwise will throw exception. 
+        /// </summary>
+        /// <param name="originalSourcePath">The original SourcePath to a file on Device</param>
+        /// <param name="width">Width of the cropped image</param>
+        /// <param name="height">Height of the cropped image</param>
+        /// <param name="addToFilename">What string should be after the originalSourcePath. if original is img20161203.jpg and addToFileName is -thumbnail then the outcome will be img20161203-thumbnail.jpg</param>
+        /// <param name="removeFromOriginalSourceFilename">a string that should be removed from original source ex. originalSourcepath = "Image-fullImage.jpg"  removeFromOriginalSourceFilename = "-fullImage" the resulting path string will be "Image"+"addToFilename+".jpg"</param> 
+        /// <param name="extraAroundFaceRectangle">Face api returns a rectangle of the face this adds extra space around that</param>
+        /// <returns>Path of the new Image File</returns>
+        async public Task<string> CropImageFace(string originalSourcePath, int width, int height, string addToFilename, string removeFromOriginalSourceFilename, int extraAroundFaceRectangle = 30)
         {
             string newPath = null;
 
@@ -112,7 +132,7 @@ namespace Plugin.CropImage
                    }
                }
                var box = new BoundingBox { Left = x, Top = y, Width = (int)faceWidth, Height = (int)faceHeight };
-              newPath= await CropImage(originalSourcePath, box, width, height, addToFilename);
+              newPath= await CropImage(originalSourcePath, box, width, height, addToFilename,removeFromOriginalSourceFilename);
            });
             return newPath;
         }
@@ -152,19 +172,43 @@ namespace Plugin.CropImage
             }
         }
 
-        public Task<string> CropImage(string originalSourcePath, BoundingBox boundingBox, int width, int height, string addToFilename, string removeFromOriginalSourceFilename = null)
-        {
-            throw new NotImplementedException();
-        }
 
-        public Task<string> CropImageFace(string originalSourcePath, int width, int height, string addToFilename, string removeFromOriginalSourceFilename, int extraAroundFaceRectangle = 30)
-        {
-            throw new NotImplementedException();
-        }
 
-        public Task<string> SmartCrop(string originalSourcePath, int width, int height, string addToFilename, string removeFromOriginalSourceFilename = null)
+
+        /// <summary>
+        /// Uses the Microsoft Vision API to generate a picture that crops automatically to whatever size you choose.
+        /// </summary>
+        /// <param name="originalSourcePath">The original SourcePath to a file on Device OR An url to a picture</param>
+        /// <param name="width">Width of the cropped image</param>
+        /// <param name="height">Height of the cropped image</param>
+        /// <param name="addToFilename">What string should be after the originalSourcePath. if original is img20161203.jpg and addToFileName is -thumbnail then the outcome will be img20161203-thumbnail.jpg</param>
+        /// <param name="removeFromOriginalSourceFilename">a string that should be removed from original source ex. originalSourcepath = "Image-fullImage.jpg"  removeFromOriginalSourceFilename = "-fullImage" the resulting path string will be "Image"+"addToFilename+".jpg"</param>
+        /// <returns></returns>
+        async public Task<string> SmartCrop(string originalSourcePath, int width, int height, string addToFilename, string removeFromOriginalSourceFilename = null)
         {
-            throw new NotImplementedException();
+            string newPath = null;
+            if (string.IsNullOrEmpty(VisionApi.Key))
+            {
+                throw new Exception("You must set VisionApi.Key");
+            }
+
+            var originalBytes = File.ReadAllBytes(originalSourcePath);
+
+            var thumbNailByteArray = await VisionApi.GetThumbNail(originalBytes, VisionApi.Key, width, height);
+
+            var orSourcePath = originalSourcePath;
+            if (!string.IsNullOrEmpty(removeFromOriginalSourceFilename))
+            {
+                orSourcePath = orSourcePath.Replace(removeFromOriginalSourceFilename, "");
+            }
+
+            var extension = orSourcePath.Substring(orSourcePath.LastIndexOf("."));
+
+            newPath = orSourcePath.Replace(extension, addToFilename + extension);
+
+            File.WriteAllBytes(newPath, thumbNailByteArray);
+
+            return newPath;
         }
 
 

@@ -88,7 +88,7 @@ namespace Plugin.CropImage
         /// </summary>
         /// <param name="originalSourcePath">The original SourcePath to a file on Device</param>
         /// <param name="width">Width of the cropped image</param>
-
+        /// <param name="height">Height of the cropped image</param>
         /// <param name="addToFilename">What string should be after the originalSourcePath. if original is img20161203.jpg and addToFileName is -thumbnail then the outcome will be img20161203-thumbnail.jpg</param>
         /// <param name="removeFromOriginalSourceFilename">a string that should be removed from original source ex. originalSourcepath = "Image-fullImage.jpg"  removeFromOriginalSourceFilename = "-fullImage" the resulting path string will be "Image"+"addToFilename+".jpg"</param> 
         /// <param name="extraAroundFaceRectangle">Face api returns a rectangle of the face this adds extra space around that</param>

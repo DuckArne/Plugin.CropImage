@@ -6,8 +6,8 @@
 		<title>CropImage Plugin for Xamarin and Windows</title>
 		<authors>Mats Andersson</authors>
 		<owners>Mats Andersson</owners>
-    <licenseUrl>http://www.Help.com</licenseUrl>
-    <projectUrl>http://www.Help.se</projectUrl>
+    <licenseUrl>https://github.com/DuckArne/Plugin.CropImage/blob/master/LICENSE.txt</licenseUrl>
+    <projectUrl>https://github.com/DuckArne/Plugin.CropImage</projectUrl>
 		<!--Default Icon, a template can be found:  https://raw.githubusercontent.com/jamesmontemagno/Xamarin-Templates/master/Plugins-Templates/icons/plugin_icon.png-->  
 		<iconUrl>https://raw.githubusercontent.com/jamesmontemagno/Xamarin-Templates/master/Plugins-Templates/icons/plugin_icon_nuget.png</iconUrl>
 

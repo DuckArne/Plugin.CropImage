@@ -4,9 +4,9 @@ Crop those Images
 Right now it only works for android and iOS.
 
 In your App.Xaml.cs or somewhere before usage:
- 
+ ```Csharp
  VisionApi.Key = "Your Vision Api Key";
- 
+ ```
  
  then use an existing picture sourcepath and feed SmartCrop. I like to use MediaPlugin by James Montemagno
 ```Csharp

@@ -9,7 +9,7 @@ In your App.Xaml.cs or somewhere before usage:
  
  
  then use an existing picture sourcepath and feed SmartCrop. I like to use MediaPlugin by James Montemagno
- 
+´´´
  var fileName = "Image-fullImage";
  
  var file = await CrossMedia.Current.TakePhotoAsync(new StoreCameraMediaOptions()
@@ -21,6 +21,6 @@ In your App.Xaml.cs or somewhere before usage:
  
  
  var thumbnailPath = await Plugin.CropImage.CrossCropImage.Current.SmartCrop(file.Path, 60, 60, "-thumbnail-60x60", "-fullImage");
-
+´´´
 
   

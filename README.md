@@ -20,7 +20,7 @@ In your App.Xaml.cs or somewhere before usage:
  });
  
  
- var facePath = await Plugin.CropImage.CrossCropImage.Current.SmartCrop(file.Path, 60, 60, "-thumbnail-60x60", "-fullImage");
+ var thumbnailPath = await Plugin.CropImage.CrossCropImage.Current.SmartCrop(file.Path, 60, 60, "-thumbnail-60x60", "-fullImage");
 
 
   

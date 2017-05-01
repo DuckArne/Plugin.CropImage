@@ -97,6 +97,7 @@ namespace Plugin.CropImage
         /// <param name="removeFromOriginalSourceFilename">a string that should be removed from original source ex. originalSourcepath = "Image-fullImage.jpg"  removeFromOriginalSourceFilename = "-fullImage" the resulting path string will be "Image"+"addToFilename+".jpg"</param> 
         /// <param name="extraAroundFaceRectangle">Face api returns a rectangle of the face this adds extra space around that</param>
         /// <returns>Path of the new Image File</returns>
+        [Obsolete("Is going to be deleted in release version")]
         async public Task<string> CropImageFace(string originalSourcePath, int width, int height, string addToFilename, string removeFromOriginalSourceFilename, int extraAroundFaceRectangle = 30)
         {
             string newPath = null;
@@ -136,7 +137,7 @@ namespace Plugin.CropImage
            });
             return newPath;
         }
-
+        [Obsolete]
         private bool IsOkExtraAroundCropping(UIImage originalImage, int extraAroundFaceRectangle, FaceRectangle face)
         {
             var maxWidth = originalImage.Size.Width;
@@ -151,7 +152,7 @@ namespace Plugin.CropImage
             }
             return true;
         }
-
+        [Obsolete]
         async private Task<FaceRectangle> GetFaceRectangle(string sourcePath)
         {
             using (Stream imageFileStream = File.OpenRead(sourcePath))
@@ -210,29 +211,5 @@ namespace Plugin.CropImage
 
             return newPath;
         }
-
-
-
-
-        //async  public Task<string[]> CreateMediumAndLowResolutionPicturesOf(string sourceImagePath)
-        //  {
-        //      string mediumPath = null, smallPath = null;
-
-        //      await Task.Run(() =>
-        //      {
-        //          var extension = sourceImagePath.Substring(sourceImagePath.LastIndexOf("."));
-
-        //          byte[] originalImage = File.ReadAllBytes(sourceImagePath);
-
-        //          byte[] medium = ImageResizer.ResizeImageToMedium(originalImage);
-        //          mediumPath = sourceImagePath.Replace(extension, "-medium" + extension);
-        //          File.WriteAllBytes(mediumPath, medium);
-
-        //          byte[] small = ImageResizer.ResizeImageToSmall(originalImage);
-        //          smallPath = sourceImagePath.Replace(extension, "-small" + extension);
-        //          File.WriteAllBytes(smallPath, small);
-        //      });
-        //      return new string[] { mediumPath, smallPath };
-        //  }
     }
 }

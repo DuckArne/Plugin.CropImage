@@ -31,6 +31,7 @@ namespace Plugin.CropImage.Abstractions
         /// <param name="removeFromOriginalSourceFilename">a string that should be removed from original source ex. originalSourcepath = "Image-fullImage.jpg"  removeFromOriginalSourceFilename = "-fullImage" the resulting path string will be "Image"+"addToFilename+".jpg"</param>
         /// <param name="extraAroundFaceRectangle">Adds extra around the faceRectangle</param>
         /// <returns>The path to the cropped image</returns>
+        [Obsolete("Is going to be deleted in release version")]
         Task<string> CropImageFace(string originalSourcePath,int width,int height,string addToFilename,string removeFromOriginalSourceFilename,int extraAroundFaceRectangle=30);
 
         /// <summary>

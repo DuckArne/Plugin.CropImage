@@ -43,15 +43,19 @@ namespace Plugin.CropImage.Abstractions
             HttpResponseMessage response;
 
             // Request body
+#if DEBUG
 
             Debug.WriteLine("Vision Api Request Uri = " + uri);
-            
+#endif
+               
 
 
             using (var content = new ByteArrayContent(originalSource))
             {
                 content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+#if DEBUG
                 Debug.WriteLine("Headers ToString = "+content.Headers.ToString());
+#endif
                 response = await client.PostAsync(uri, content);
             }
 

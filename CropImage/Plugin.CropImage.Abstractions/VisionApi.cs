@@ -38,7 +38,7 @@ namespace Plugin.CropImage.Abstractions
             queryString.AddParameter("height", height);
             queryString.AddParameter("smartCropping", smartCrop.ToString());
             
-            var uri = "https://api.projectoxford.ai/vision/v1.0/generateThumbnail?" + queryString.QueryString;
+            var uri = "https://westeurope.api.cognitive.microsoft.com/vision/v1.0/generateThumbnail?" + queryString.QueryString;
 
             HttpResponseMessage response;
 
@@ -48,8 +48,6 @@ namespace Plugin.CropImage.Abstractions
             Debug.WriteLine("Vision Api Request Uri = " + uri);
 #endif
                
-
-
             using (var content = new ByteArrayContent(originalSource))
             {
                 content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");

@@ -99,7 +99,7 @@ namespace Plugin.CropImage {
         /// <returns></returns>
         public async Task<string> SmartCrop(string originalSourcePath, int width, int height, string addToFilename, string removeFromOriginalSourceFilename = null) {
             string newPath = null;
-
+           
             if (string.IsNullOrEmpty(VisionApi.Key)) {
                 throw new Exception("You must set VisionApi.Key");
             }

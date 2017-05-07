@@ -11,24 +11,81 @@ namespace Plugin.CropImage {
     /// Implementation for Feature
     /// </summary>
     public class CropImageImplementation : ICropImage {
-
+      
+        /// <summary>
+        /// Crops an image by the BoundingBox and returns in the size you specify.
+        /// The new image will be saved on the device.
+        /// </summary>
+        /// <param name="originalSourcePath">The original SourcePath to a file on Device</param>
+        /// <param name="boundingBox">The image box that will be used to crop</param>
+        /// <param name="width">Width of the cropped image</param>
+        /// <param name="height">Height of the cropped image</param>
+        /// <param name="addToFilename">What string should be after the originalSourcePath. if original is img20161203.jpg and addToFileName is -thumbnail then the outcome will be img20161203-thumbnail.jpg</param>
+        ///  /// <param name="removeFromOriginalSourceFilename">a string that should be removed from original source ex. originalSourcepath = "Image-fullImage.jpg"  removeFromOriginalSourceFilename = "-fullImage" the resulting path string will be "Image"+"addToFilename+".jpg"</param> 
+        /// <returns>The path to the cropped image</returns>
         async public Task<string> CropImage(string originalSourcePath, BoundingBox boundingBox, int width, int height, string addToFilename, string removeFromOriginalSourceFilename = null) {
 
-            var newPathToGeneratedFile = SetupNewSourcePath(originalSourcePath, removeFromOriginalSourceFilename, addToFilename);
-
-            var originalFile = await StorageFile.GetFileFromPathAsync(originalSourcePath);
-
-            var newFile = await originalFile.CopyAsync(await StorageFolder.GetFolderFromPathAsync(newPathToGeneratedFile));
+            var newFile = await MakeCopyOfFile(originalSourcePath, addToFilename, removeFromOriginalSourceFilename);
             var softwareBitmap = await GetSoftwareBitmap(newFile);
             await CropBitmap(newFile, softwareBitmap, boundingBox);
 
-            var croppedFile = await StorageFile.GetFileFromPathAsync(newPathToGeneratedFile);
+            var croppedFile = await StorageFile.GetFileFromPathAsync(newFile.Path);
             var croppedBitmap = await GetSoftwareBitmap(croppedFile);
             await ScaleBitmap(croppedFile, croppedBitmap, width, height);
-            return newPathToGeneratedFile;
+            return newFile.Path;
         }
 
-       async private Task ScaleBitmap(StorageFile croppedFile, SoftwareBitmap croppedBitmap, int width, int height) {
+      
+
+
+        /// <summary>
+        /// Uses the Microsoft Vision API to generate a picture that crops automatically to whatever size you choose.
+        /// </summary>
+        /// <param name="originalSourcePath">The original SourcePath to a file on Device OR An url to a picture</param>
+        /// <param name="width">Width of the cropped image</param>
+        /// <param name="height">Height of the cropped image</param>
+        /// <param name="addToFilename">What string should be after the originalSourcePath. if original is img20161203.jpg and addToFileName is -thumbnail then the outcome will be img20161203-thumbnail.jpg</param>
+        /// <param name="removeFromOriginalSourceFilename">a string that should be removed from original source ex. originalSourcepath = "Image-fullImage.jpg"  removeFromOriginalSourceFilename = "-fullImage" the resulting path string will be "Image"+"addToFilename+".jpg"</param>
+        /// <returns></returns>
+        public async Task<string> SmartCrop(string originalSourcePath, int width, int height, string addToFilename, string removeFromOriginalSourceFilename = null) {
+            string newPath = null;
+           
+            if (string.IsNullOrEmpty(VisionApi.Key)) {
+                throw new Exception("You must set VisionApi.Key");
+            }
+
+            var originalBytes = File.ReadAllBytes(originalSourcePath);
+
+            var thumbNailByteArray = await VisionApi.GetThumbNail(originalBytes, VisionApi.Key, width, height);
+
+            var orSourcePath = originalSourcePath;
+            if (!string.IsNullOrEmpty(removeFromOriginalSourceFilename)) {
+                orSourcePath = orSourcePath.Replace(removeFromOriginalSourceFilename, "");
+            }
+
+            var extension = orSourcePath.Substring(orSourcePath.LastIndexOf("."));
+
+            newPath = orSourcePath.Replace(extension, addToFilename + extension);
+
+            File.WriteAllBytes(newPath, thumbNailByteArray);
+
+            return newPath;
+        }
+
+        #region Private 
+        async private Task<StorageFile> MakeCopyOfFile(string originalSourcePath, string addToFilename, string removeFromOriginalSourceFilename) {
+            var originalFile = await StorageFile.GetFileFromPathAsync(originalSourcePath);
+            var newFileName = SetupNewSourcePath(originalFile.Name, removeFromOriginalSourceFilename, addToFilename);
+            var newPathToGeneratedFile = SetupNewSourcePath(originalSourcePath, removeFromOriginalSourceFilename, addToFilename);
+
+            return await originalFile.CopyAsync(await GetFolderFromStorageFile(originalFile), newFileName, NameCollisionOption.ReplaceExisting);
+        }
+
+        async private Task<IStorageFolder> GetFolderFromStorageFile(StorageFile originalFile) {
+            return await StorageFolder.GetFolderFromPathAsync(originalFile.Path.Replace(originalFile.Name, ""));
+        }
+
+        async private Task ScaleBitmap(StorageFile croppedFile, SoftwareBitmap croppedBitmap, int width, int height) {
 
             using (IRandomAccessStream newStream = await croppedFile.OpenAsync(FileAccessMode.ReadWrite)) {
                 BitmapEncoder encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.JpegEncoderId, newStream);
@@ -39,7 +96,7 @@ namespace Plugin.CropImage {
                     await encoder.FlushAsync();
                 }
                 catch (Exception err) {
-                    throw new Exception("[CropImageImplementation] ScaleBitmap Could not scale Bitmap Message= " + err.Message);                 
+                    throw new Exception("[CropImageImplementation] ScaleBitmap Could not scale Bitmap Message= " + err.Message);
                 }
             }
         }
@@ -81,45 +138,6 @@ namespace Plugin.CropImage {
             var extension = orSourcePath.Substring(orSourcePath.LastIndexOf("."));
             return orSourcePath.Replace(extension, addToFilename + extension);
         }
-
-        [Obsolete("Is going to be deleted in release version")]
-        public Task<string> CropImageFace(string originalSourcePath, int width, int height, string addToFilename, string removeFromOriginalSourceFilename, int extraAroundFaceRectangle = 30) {
-            throw new NotImplementedException();
-        }
-
-
-        /// <summary>
-        /// Uses the Microsoft Vision API to generate a picture that crops automatically to whatever size you choose.
-        /// </summary>
-        /// <param name="originalSourcePath">The original SourcePath to a file on Device OR An url to a picture</param>
-        /// <param name="width">Width of the cropped image</param>
-        /// <param name="height">Height of the cropped image</param>
-        /// <param name="addToFilename">What string should be after the originalSourcePath. if original is img20161203.jpg and addToFileName is -thumbnail then the outcome will be img20161203-thumbnail.jpg</param>
-        /// <param name="removeFromOriginalSourceFilename">a string that should be removed from original source ex. originalSourcepath = "Image-fullImage.jpg"  removeFromOriginalSourceFilename = "-fullImage" the resulting path string will be "Image"+"addToFilename+".jpg"</param>
-        /// <returns></returns>
-        public async Task<string> SmartCrop(string originalSourcePath, int width, int height, string addToFilename, string removeFromOriginalSourceFilename = null) {
-            string newPath = null;
-           
-            if (string.IsNullOrEmpty(VisionApi.Key)) {
-                throw new Exception("You must set VisionApi.Key");
-            }
-
-            var originalBytes = File.ReadAllBytes(originalSourcePath);
-
-            var thumbNailByteArray = await VisionApi.GetThumbNail(originalBytes, VisionApi.Key, width, height);
-
-            var orSourcePath = originalSourcePath;
-            if (!string.IsNullOrEmpty(removeFromOriginalSourceFilename)) {
-                orSourcePath = orSourcePath.Replace(removeFromOriginalSourceFilename, "");
-            }
-
-            var extension = orSourcePath.Substring(orSourcePath.LastIndexOf("."));
-
-            newPath = orSourcePath.Replace(extension, addToFilename + extension);
-
-            File.WriteAllBytes(newPath, thumbNailByteArray);
-
-            return newPath;
-        }
+        #endregion
     }
 }

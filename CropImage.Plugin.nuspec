@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
 	<metadata minClientVersion="2.8.3">
 		<id>Plugin.CropImage</id>
-		<version>1.0.14-pre</version>
+		<version>1.0.15-pre</version>
 		<title>CropImage Plugin for Xamarin and Windows</title>
 		<authors>Mats Andersson</authors>
 		<owners>Mats Andersson</owners>
@@ -14,10 +14,10 @@
 		<requireLicenseAcceptance>false</requireLicenseAcceptance>
 		<description>
         Simple CropImage Plugin for UWP Android Ios.
-        That also uses Microsoft FaceApi and Microsoft vision For smart cropping
+        That also uses Microsoft vision for smart cropping
 		</description>
 		<summary>Crop images</summary>
-		<tags>xamarin, pcl, xam.pcl, plugin, plugin for xamarin, UWP, android, xamarin.forms, ios</tags>
+		<tags>xamarin, xam.pcl, plugin, plugin for xamarin, UWP, android, xamarin.forms, ios</tags>
 		<dependencies>
 
       <group targetFramework="net">

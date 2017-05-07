@@ -15,7 +15,7 @@ namespace Plugin.CropImage.Abstractions
         /// Vision Subscription Key
         /// </summary>
         public static string Key{get;set;}
-
+        public static Endpoint Server { get; set; } = Endpoint.WestEurope;
         /// <summary>
         /// Returns an image byte[] smartcropped ...
         /// </summary>

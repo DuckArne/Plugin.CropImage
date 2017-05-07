@@ -40,6 +40,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BoundingBox.cs" />
+    <Compile Include="Endpoint.cs" />
     <Compile Include="FaceApi.cs" />
     <Compile Include="ICropImage.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

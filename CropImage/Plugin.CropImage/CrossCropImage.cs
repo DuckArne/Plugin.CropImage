@@ -1,13 +1,11 @@
 ﻿using Plugin.CropImage.Abstractions;
-
 using System;
 
-namespace Plugin.CropImage
-{
-  /// <summary>
-  /// Cross platform CropImage implemenations
-  /// </summary>
-  public class CrossCropImage
+namespace Plugin.CropImage {
+    /// <summary>
+    /// Cross platform CropImage implemenations
+    /// </summary>
+    public class CrossCropImage
   {
     static Lazy<ICropImage> Implementation = new Lazy<ICropImage>(() => CreateCropImage(), System.Threading.LazyThreadSafetyMode.PublicationOnly);
 

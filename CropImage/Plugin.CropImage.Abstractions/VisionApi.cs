@@ -1,11 +1,8 @@
-﻿
-using Stannieman.HttpQueries;
-using System.Diagnostics;
+﻿using Stannieman.HttpQueries;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
-namespace Plugin.CropImage.Abstractions
-{
+namespace Plugin.CropImage.Abstractions {
     /// <summary>
     /// Class that holds static property with key for VisionApi.
     /// </summary>
@@ -15,7 +12,12 @@ namespace Plugin.CropImage.Abstractions
         /// Vision Subscription Key
         /// </summary>
         public static string Key{get;set;}
+
+        /// <summary>
+        /// Which Endpoint to run against.
+        /// </summary>
         public static Endpoint Server { get; set; } = Endpoint.WestEurope;
+
         /// <summary>
         /// Returns an image byte[] smartcropped ...
         /// </summary>
@@ -38,29 +40,19 @@ namespace Plugin.CropImage.Abstractions
             queryString.AddParameter("height", height);
             queryString.AddParameter("smartCropping", smartCrop.ToString());
             
-            var uri = "https://westeurope.api.cognitive.microsoft.com/vision/v1.0/generateThumbnail?" + queryString.QueryString;
+            var uri = "https://"+Server.ToString().ToLower()+".api.cognitive.microsoft.com/vision/v1.0/generateThumbnail?" + queryString.QueryString;
 
             HttpResponseMessage response;
-
-            // Request body
-#if DEBUG
-
-            Debug.WriteLine("Vision Api Request Uri = " + uri);
-#endif
-               
+    
             using (var content = new ByteArrayContent(originalSource))
             {
                 content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-#if DEBUG
-                Debug.WriteLine("Headers ToString = "+content.Headers.ToString());
-#endif
                 response = await client.PostAsync(uri, content);
             }
 
             response.EnsureSuccessStatusCode();
 
             return await response.Content.ReadAsByteArrayAsync();
-
         }
     }
 }

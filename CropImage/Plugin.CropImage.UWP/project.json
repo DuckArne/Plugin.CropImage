@@ -5,7 +5,6 @@
     "Microsoft.Net.Http": "2.2.29",
     "Microsoft.NETCore.UniversalWindowsPlatform": "5.1.0",
     "Newtonsoft.Json": "8.0.3",
-    "PCL.Cognitive.Face": "1.0.0",
     "Stannieman.HttpQueries": "1.0.0"
   },
   "frameworks": {

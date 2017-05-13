@@ -55,13 +55,9 @@ namespace Plugin.CropImage {
         async public Task<string> SmartCrop(string originalSourcePath, int width, int height, string addToFilename, string removeFromOriginalSourceFilename = null) {
             string newPath = null;
 
-            if (string.IsNullOrEmpty(VisionApi.Key)) {
-                throw new Exception("You must set VisionApi.Key");
-            }
-
             var originalBytes = File.ReadAllBytes(originalSourcePath);
 
-            var thumbNailByteArray = await VisionApi.GetThumbNail(originalBytes, VisionApi.Key, width, height);
+            var thumbNailByteArray = await VisionApi.GetThumbNail(originalBytes,width, height);
 
             newPath = SetupNewSourcePath(originalSourcePath, removeFromOriginalSourceFilename, addToFilename);
 
@@ -70,7 +66,47 @@ namespace Plugin.CropImage {
             return newPath;
         }
 
+        /// <summary>
+        /// Uses the Microsoft Vision API to generate a picture that crops automatically to whatever size you choose.
+        /// </summary>
+        /// <param name="originalSourcePath">The original SourcePath to a file on Device OR An url to a picture</param>
+        /// <param name="width">Width of the cropped image</param>
+        /// <param name="height">Height of the cropped image</param>
+        /// <returns>Byte array of new image</returns>
+        async public Task<byte[]> SmartCrop(string originalSourcePath, int width, int height) {    
+            var originalBytes = File.ReadAllBytes(originalSourcePath);
+            return await VisionApi.GetThumbNail(originalBytes,width, height);
+        }
+
+
+        /// <summary>
+        /// Uses the Microsoft Vision API to generate a picture that crops automatically to whatever size you choose.
+        /// </summary>
+        /// <param name="stream">Stream of an image that is used to send to Vision api</param>
+        /// <param name="width">Width of the cropped image</param>
+        /// <param name="height">Height of the cropped image</param>
+        /// <returns>Byte array of new image</returns>
+        async public Task<byte[]> SmartCrop(Stream stream, int width, int height) {
+            return await VisionApi.GetThumbNail(stream.ToByteArray(), width, height);
+        }
+
+        /// <summary>
+        /// Uses the Microsoft Vision API to generate a picture that crops automatically to whatever size you choose.
+        /// </summary>
+        /// <param name="stream">Stream of an image that is used to send to Vision api</param>
+        /// <param name="width">Width of the cropped image</param>
+        /// <param name="height">Height of the cropped image</param>
+        /// <param name="newFilePath">path to file that is going to be created</param>
+        /// <returns>The path to the cropped image</returns>
+        async public Task<string> SmartCrop(Stream stream, int width, int height, string newFilePath) {
+            var thumbNailByteArray = await VisionApi.GetThumbNail(stream.ToByteArray(), width, height);
+            File.WriteAllBytes(newFilePath, thumbNailByteArray);
+            return newFilePath;
+        }
+
         #region Private Methods
+       
+
         private string SetupNewSourcePath(string originalSourcePath, string removeFromOriginalSourceFilename, string addToFilename) {
             var orSourcePath = originalSourcePath;
             if (!string.IsNullOrEmpty(removeFromOriginalSourceFilename)) {
@@ -94,6 +130,8 @@ namespace Plugin.CropImage {
             }
             return compressed;
         }
+
+      
         #endregion
 
 

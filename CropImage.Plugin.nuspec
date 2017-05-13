@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
 	<metadata minClientVersion="2.8.3">
 		<id>Plugin.CropImage</id>
-		<version>1.0.15-pre</version>
+		<version>1.0.21-pre</version>
 		<title>CropImage Plugin for Xamarin and Windows</title>
 		<authors>Mats Andersson</authors>
 		<owners>Mats Andersson</owners>
@@ -22,59 +22,68 @@
 
       <group targetFramework="net">
         <dependency id="Stannieman.HttpQueries" version="1.0"/>
-        <dependency id="PCL.Cognitive.Face" version="1.0"/>
         <dependency id="Microsoft.Net.Http" version="2.2.29"/>
+        <dependency id="Microsoft.Bcl.Build" version="1.0.21"/>
         <dependency id="Newtonsoft.Json" version="8.0.3"/>
+      
       </group>
 			<group targetFramework="win">
         <dependency id="Stannieman.HttpQueries" version="1.0"/>
-        <dependency id="PCL.Cognitive.Face" version="1.0"/>
         <dependency id="Microsoft.Net.Http" version="2.2.29"/>
+        <dependency id="Microsoft.Bcl.Build" version="1.0.21"/>
         <dependency id="Newtonsoft.Json" version="8.0.3"/>
+     
 			</group>
 			<group targetFramework="wp">
         <dependency id="Stannieman.HttpQueries" version="1.0"/>
-        <dependency id="PCL.Cognitive.Face" version="1.0"/>
         <dependency id="Microsoft.Net.Http" version="2.2.29"/>
+        <dependency id="Microsoft.Bcl.Build" version="1.0.21"/>
         <dependency id="Newtonsoft.Json" version="8.0.3"/>
+      
 			</group>
 			<group targetFramework="wpa">
         <dependency id="Stannieman.HttpQueries" version="1.0"/>
-        <dependency id="PCL.Cognitive.Face" version="1.0"/>
         <dependency id="Microsoft.Net.Http" version="2.2.29"/>
+        <dependency id="Microsoft.Bcl.Build" version="1.0.21"/>
         <dependency id="Newtonsoft.Json" version="8.0.3"/>
+      
 			</group>
 			<group targetFramework="MonoAndroid">
         <dependency id="Stannieman.HttpQueries" version="1.0"/>
-        <dependency id="PCL.Cognitive.Face" version="1.0"/>
         <dependency id="Microsoft.Net.Http" version="2.2.29"/>
+        <dependency id="Microsoft.Bcl.Build" version="1.0.21"/>
         <dependency id="Newtonsoft.Json" version="8.0.3"/>
+     
 			</group>
 			<group targetFramework="Xamarin.iOS10">
         <dependency id="Stannieman.HttpQueries" version="1.0"/>
-        <dependency id="PCL.Cognitive.Face" version="1.0"/>
         <dependency id="Microsoft.Net.Http" version="2.2.29"/>
+        <dependency id="Microsoft.Bcl.Build" version="1.0.21"/>
         <dependency id="Newtonsoft.Json" version="8.0.3"/>
+     
 			</group>
 			<group targetFramework="Xamarin.Mac20">
 			</group>
 			<group targetFramework="portable-net45+win+wpa81+wp80">
         <dependency id="Stannieman.HttpQueries" version="1.0"/>
-        <dependency id="PCL.Cognitive.Face" version="1.0"/>
         <dependency id="Microsoft.Net.Http" version="2.2.29"/>
+        <dependency id="Microsoft.Bcl.Build" version="1.0.21"/>
         <dependency id="Newtonsoft.Json" version="8.0.3"/>
+    
 			</group>
 			<group targetFramework="uap">
         <dependency id="Stannieman.HttpQueries" version="1.0"/>
-        <dependency id="PCL.Cognitive.Face" version="1.0"/>
         <dependency id="Microsoft.Net.Http" version="2.2.29"/>
+        <dependency id="Microsoft.Bcl.Build" version="1.0.21"/>
         <dependency id="Newtonsoft.Json" version="8.0.3"/>
+     
 			</group>
 			<group targetFramework="dotnet">
         <dependency id="Stannieman.HttpQueries" version="1.0"/>
-        <dependency id="PCL.Cognitive.Face" version="1.0"/>
         <dependency id="Microsoft.Net.Http" version="2.2.29"/>
+        <dependency id="Microsoft.Bcl.Build" version="1.0.21"/>
         <dependency id="Newtonsoft.Json" version="8.0.3"/>
+     
 			</group>
 		</dependencies>
 	</metadata>

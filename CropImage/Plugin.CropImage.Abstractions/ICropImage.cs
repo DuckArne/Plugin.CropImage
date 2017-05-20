@@ -59,5 +59,21 @@ namespace Plugin.CropImage.Abstractions {
         /// <param name="newFilePath">path to file that is going to be created</param>
         /// <returns>The path to the cropped image</returns>
         Task<string> SmartCrop(Stream stream, int width, int height, string newFilePath);
+
+        /// <summary>
+        /// Microsoft Vision Api has a max size of 4MB use this to maximize quality.
+        /// </summary>
+        /// <param name="filePath">path to Image to check</param>
+        /// <param name="maxBytes">the max length in bytes</param>
+        /// <returns>path to file</returns>
+        Task<string> FixMaxImageSize(string filePath, long maxBytes);
+
+        /// <summary>
+        /// Microsoft Vision Api has a max size of 4MB use this to maximize quality.
+        /// </summary>
+        /// <param name="file">Image to check</param>
+        /// <param name="maxBytes">the max length in bytes</param>
+        /// <returns>path to file</returns>
+        Task<byte[]> FixMaxImageSize(Stream file, long maxBytes);
     }
 }

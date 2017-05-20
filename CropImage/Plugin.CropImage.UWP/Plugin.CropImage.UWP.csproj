@@ -114,6 +114,7 @@
     </Compile>
     <Compile Include="CropImageImplementation.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RandomStream.cs" />
     <EmbeddedResource Include="Properties\Plugin.CropImage.UWP.rd.xml" />
   </ItemGroup>
   <ItemGroup>

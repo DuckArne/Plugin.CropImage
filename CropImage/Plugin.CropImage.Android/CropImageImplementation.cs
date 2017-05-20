@@ -22,8 +22,8 @@ namespace Plugin.CropImage {
         /// <returns>The path to the cropped image</returns>
         async public Task<string> CropImage(string originalSourcePath, BoundingBox boundingBox, int width, int height, string addToFilename, string removeFromOriginalSourceFilename = null) {
             string newPath = null;
-
-            Bitmap originalImage = await LoadOriginalBitmap(originalSourcePath);
+           var downSampledPath =await FixMaxImageSize(originalSourcePath, 4000000);
+            Bitmap originalImage = await LoadOriginalBitmap(downSampledPath);
 
             var croppedBitmap = Bitmap.CreateBitmap(originalImage, boundingBox.Left, boundingBox.Top, boundingBox.Width, boundingBox.Height);
 
@@ -54,11 +54,15 @@ namespace Plugin.CropImage {
         /// <returns></returns>
         async public Task<string> SmartCrop(string originalSourcePath, int width, int height, string addToFilename, string removeFromOriginalSourceFilename = null) {
             string newPath = null;
-
-            var originalBytes = File.ReadAllBytes(originalSourcePath);
-
-            var thumbNailByteArray = await VisionApi.GetThumbNail(originalBytes,width, height);
-
+            byte[] thumbNailByteArray = null;
+            if (originalSourcePath.IsUrl()) {
+                thumbNailByteArray = await VisionApi.GetThumbNail(originalSourcePath, width, height);
+            }
+            else {
+                var downSampledPath = await FixMaxImageSize(originalSourcePath, 4000000);
+                var originalBytes = File.ReadAllBytes(downSampledPath);
+                thumbNailByteArray = await VisionApi.GetThumbNail(originalBytes, width, height);
+            }
             newPath = SetupNewSourcePath(originalSourcePath, removeFromOriginalSourceFilename, addToFilename);
 
             File.WriteAllBytes(newPath, thumbNailByteArray);
@@ -73,9 +77,18 @@ namespace Plugin.CropImage {
         /// <param name="width">Width of the cropped image</param>
         /// <param name="height">Height of the cropped image</param>
         /// <returns>Byte array of new image</returns>
-        async public Task<byte[]> SmartCrop(string originalSourcePath, int width, int height) {    
-            var originalBytes = File.ReadAllBytes(originalSourcePath);
-            return await VisionApi.GetThumbNail(originalBytes,width, height);
+        async public Task<byte[]> SmartCrop(string originalSourcePath, int width, int height) {
+            
+            if (originalSourcePath.IsUrl()) {
+                return await VisionApi.GetThumbNail(originalSourcePath, width, height);
+                
+            }
+            else          
+            {
+                var downSampledPath = await FixMaxImageSize(originalSourcePath, 4000000);
+               var originalBytes = File.ReadAllBytes(downSampledPath);
+                return await VisionApi.GetThumbNail(originalBytes, width, height);
+            }                      
         }
 
 
@@ -87,6 +100,9 @@ namespace Plugin.CropImage {
         /// <param name="height">Height of the cropped image</param>
         /// <returns>Byte array of new image</returns>
         async public Task<byte[]> SmartCrop(Stream stream, int width, int height) {
+            if (stream.Length > 4000000) {
+                throw new NotSupportedException("You are trying to SmartCrop a Stream that is bigger than 4Mb");
+            }
             return await VisionApi.GetThumbNail(stream.ToByteArray(), width, height);
         }
 
@@ -99,13 +115,56 @@ namespace Plugin.CropImage {
         /// <param name="newFilePath">path to file that is going to be created</param>
         /// <returns>The path to the cropped image</returns>
         async public Task<string> SmartCrop(Stream stream, int width, int height, string newFilePath) {
+            if (stream.Length > 4000000) {
+                throw new NotSupportedException("You are trying to SmartCrop a Stream that is bigger than 4Mb");
+            }
             var thumbNailByteArray = await VisionApi.GetThumbNail(stream.ToByteArray(), width, height);
             File.WriteAllBytes(newFilePath, thumbNailByteArray);
             return newFilePath;
         }
+        /// <summary>
+        /// Checks if size of file is bigger than given maxBytes. If so it downsamples the image to the size of maxBytes.
+        /// </summary>
+        /// <param name="filePath">Path to file</param>
+        /// <param name="maxBytes">Max aloud bytes</param>
+        /// <returns>Path to file under given maxBytes or the filePath if filesize was smaller than given maxBytes</returns>
+        async public Task<string> FixMaxImageSize(string filePath, long maxBytes) {
+            FileInfo info = new FileInfo(filePath);
+
+            var length = info.Length;
+            if (length > maxBytes) {
+                var originalBitmap = await DecodeSampledBitmapFromFile(filePath, 500, 500);              
+                byte[] compressed = CompressBitmap(originalBitmap);
+                var newPath = SetupNewSourcePath(filePath, "", "-smallerCopy");
+                File.WriteAllBytes(newPath, compressed);
+                originalBitmap.Recycle();
+                return newPath;
+            }
+            return filePath;
+        }
+
+
+        /// <summary>
+        /// Checks if size of file is bigger than given maxBytes. If so it downsamples the image to the size of maxBytes.
+        /// </summary>
+        /// <param name="stream">Stream </param>
+        /// <param name="maxBytes">Max aloud bytes</param>
+        /// <returns>Byte array of stream under given maxBytes, or the byte array of original stream if stream length was smaller than given maxBytes</returns>
+        async public Task<byte[]> FixMaxImageSize(Stream stream, long maxBytes) {   
+            var length = stream.Length;
+            if (length > maxBytes) {
+                var originalBitmap = await DecodeSampledBitmapFromBytes(stream.ToByteArray(), 500, 500);                
+                originalBitmap.Recycle();             
+                return CompressBitmap(originalBitmap);
+            }
+            return stream.ToByteArray();
+        }
 
         #region Private Methods
-       
+        private Bitmap ResizeBitmap(Bitmap originalBitmap, long maxBytes) {
+            var percentageToFit = (float)originalBitmap.ByteCount / maxBytes;
+            return Bitmap.CreateScaledBitmap(originalBitmap, (int)(originalBitmap.Width / percentageToFit), (int)(originalBitmap.Height / percentageToFit), false);
+        }
 
         private string SetupNewSourcePath(string originalSourcePath, string removeFromOriginalSourceFilename, string addToFilename) {
             var orSourcePath = originalSourcePath;
@@ -118,6 +177,7 @@ namespace Plugin.CropImage {
         }
 
         async private Task<Bitmap> LoadOriginalBitmap(string originalSourcePath) {
+           await  FixMaxImageSize(originalSourcePath, 4000000);
             var original = File.ReadAllBytes(originalSourcePath);
             return await BitmapFactory.DecodeByteArrayAsync(original, 0, original.Length);
         }
@@ -131,7 +191,58 @@ namespace Plugin.CropImage {
             return compressed;
         }
 
-      
+        private  int CalculateInSampleSize(
+             BitmapFactory.Options options, int reqWidth, int reqHeight) {
+            // Raw height and width of image
+             int height = options.OutHeight;
+           int width = options.OutWidth;
+            int inSampleSize = 1;
+
+            if (height > reqHeight || width > reqWidth) {
+
+                 int halfHeight = height / 2;
+                 int halfWidth = width / 2;
+
+                // Calculate the largest inSampleSize value that is a power of 2 and keeps both
+                // height and width larger than the requested height and width.
+                while ((halfHeight / inSampleSize) >= reqHeight
+                        && (halfWidth / inSampleSize) >= reqWidth) {
+                    inSampleSize *= 2;
+                }
+            }
+
+            return inSampleSize;
+        }
+
+       async private Task<Bitmap> DecodeSampledBitmapFromFile(string path,int reqWidth, int reqHeight) {
+
+            // First decode with inJustDecodeBounds=true to check dimensions
+             BitmapFactory.Options options = new BitmapFactory.Options();
+            options.InJustDecodeBounds = true;
+            await BitmapFactory.DecodeFileAsync(path,options);
+           
+            // Calculate inSampleSize
+            options.InSampleSize = CalculateInSampleSize(options, reqWidth, reqHeight);
+
+            // Decode bitmap with inSampleSize set
+            options.InJustDecodeBounds = false;
+            return await BitmapFactory.DecodeFileAsync(path,options);
+        }
+
+        async private Task<Bitmap> DecodeSampledBitmapFromBytes(byte[] bytes, int reqWidth, int reqHeight) {
+
+            // First decode with inJustDecodeBounds=true to check dimensions
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.InJustDecodeBounds = true;
+            await BitmapFactory.DecodeByteArrayAsync(bytes,0,bytes.Length,options);
+
+            // Calculate inSampleSize
+            options.InSampleSize = CalculateInSampleSize(options, reqWidth, reqHeight);
+
+            // Decode bitmap with inSampleSize set
+            options.InJustDecodeBounds = false;
+            return await BitmapFactory.DecodeByteArrayAsync(bytes,0,bytes.Length, options);
+        }
         #endregion
 
 

@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 
 namespace Plugin.CropImage.Abstractions {
     public static class Extensions {
@@ -12,6 +13,12 @@ namespace Plugin.CropImage.Abstractions {
                 return ms.ToArray();
             }
 
+        }
+
+        public static bool IsUrl(this string str) {
+            Uri uriResult;
+           return Uri.TryCreate(str, UriKind.Absolute, out uriResult)
+                && (uriResult.Scheme == "http" || uriResult.Scheme == "https");
         }
     }
 }

@@ -1,6 +1,8 @@
 using CoreGraphics;
+using Foundation;
 using Plugin.CropImage.Abstractions;
 using System;
+using System.Drawing;
 using System.IO;
 using System.Threading.Tasks;
 using UIKit;
@@ -48,11 +50,15 @@ namespace Plugin.CropImage {
         async public Task<string> SmartCrop(string originalSourcePath, int width, int height, string addToFilename, string removeFromOriginalSourceFilename = null)
         {
             string newPath = null;
-          
-            var originalBytes = File.ReadAllBytes(originalSourcePath);
-
-            var thumbNailByteArray = await VisionApi.GetThumbNail(originalBytes,width, height);
-
+            byte[] thumbNailByteArray = null;
+            if (originalSourcePath.IsUrl()) {
+                thumbNailByteArray = await VisionApi.GetThumbNail(originalSourcePath, width, height);
+            }
+            else {
+                var downSampledPath = await FixMaxImageSize(originalSourcePath, 4000000);
+                var originalBytes = File.ReadAllBytes(downSampledPath);
+                thumbNailByteArray = await VisionApi.GetThumbNail(originalBytes, width, height);
+            }
             newPath = SetupNewSourcePath(originalSourcePath, removeFromOriginalSourceFilename, addToFilename);
 
             File.WriteAllBytes(newPath, thumbNailByteArray);
@@ -68,8 +74,15 @@ namespace Plugin.CropImage {
         /// <param name="height">Height of the cropped image</param>
         /// <returns>Byte array of new image</returns>
         async public Task<byte[]> SmartCrop(string originalSourcePath, int width, int height) {
-            var originalBytes = File.ReadAllBytes(originalSourcePath);
-            return await VisionApi.GetThumbNail(originalBytes, width, height);
+            if (originalSourcePath.IsUrl()) {
+                return await VisionApi.GetThumbNail(originalSourcePath, width, height);
+
+            }
+            else {
+                var downSampledPath = await FixMaxImageSize(originalSourcePath, 4000000);
+                var originalBytes = File.ReadAllBytes(downSampledPath);
+                return await VisionApi.GetThumbNail(originalBytes, width, height);
+            }
         }
 
         /// <summary>
@@ -80,6 +93,9 @@ namespace Plugin.CropImage {
         /// <param name="height">Height of the cropped image</param>
         /// <returns>Byte array of new image</returns>
         async public Task<byte[]> SmartCrop(Stream stream, int width, int height) {
+            if (stream.Length > 4000000) {
+                throw new NotSupportedException("You are trying to SmartCrop a Stream that is bigger than 4Mb");
+            }
             return await VisionApi.GetThumbNail(stream.ToByteArray(), width, height);
         }
 
@@ -92,12 +108,67 @@ namespace Plugin.CropImage {
         /// <param name="newFilePath">path to file that is going to be created</param>
         /// <returns>The path to the cropped image</returns>
         async public Task<string> SmartCrop(Stream stream, int width, int height, string newFilePath) {
+            if (stream.Length > 4000000) {
+                throw new NotSupportedException("You are trying to SmartCrop a Stream that is bigger than 4Mb");
+            }
             var thumbNailByteArray = await VisionApi.GetThumbNail(stream.ToByteArray(), width, height);
             File.WriteAllBytes(newFilePath, thumbNailByteArray);
             return newFilePath;
         }
 
+        /// <summary>
+        /// Checks if size of file is bigger than given maxBytes. If so it downsamples the image to the size of maxBytes.
+        /// </summary>
+        /// <param name="filePath">Path to file</param>
+        /// <param name="maxBytes">Max aloud bytes</param>
+        /// <returns>Path to file under given maxBytes or the filePath if filesize was smaller than given maxBytes</returns>
+         public Task<string> FixMaxImageSize(string filePath, long maxBytes) {
+            var info = new FileInfo(filePath);
+
+            var length = info.Length;
+            Stream newImageStream;
+
+            if (length > maxBytes) {
+                newImageStream =  ResizeImageToFit(filePath, length, maxBytes);
+                var newFilePath = SetupNewSourcePath(filePath, "", "-smallerCopy");
+                File.WriteAllBytes(newFilePath, newImageStream.ToByteArray());
+                return Task.FromResult(newFilePath);
+            }
+            return Task.FromResult(filePath);
+        }
+
+
+        /// <summary>
+        /// Checks if size of file is bigger than given maxBytes. If so it downsamples the image to the size of maxBytes.
+        /// </summary>
+        /// <param name="stream">Stream </param>
+        /// <param name="maxBytes">Max aloud bytes</param>
+        /// <returns>Byte array of stream under given maxBytes, or the byte array of original stream if stream length was smaller than given maxBytes</returns>
+        public Task<byte[]> FixMaxImageSize(Stream stream, long maxBytes) {
+            Stream newImageStream;
+            var length = stream.Length; 
+            if (length > maxBytes) {
+                newImageStream = ResizeImageToFit(null, length, maxBytes,stream);
+                return Task.FromResult(newImageStream.ToByteArray());                          
+            }
+            return Task.FromResult(stream.ToByteArray());         
+        }
+
         #region Private Methods
+        private Stream ResizeImageToFit(string filePath, long length, long maxBytes, Stream stream = null) {
+            var percentageToFit = (float)length/maxBytes;
+            UIImage oldImage = null;
+            if (stream == null) {
+                oldImage = UIImage.FromFile(filePath);
+            }
+            else {
+                oldImage = UIImage.LoadFromData(NSData.FromStream(stream));
+            }
+            var newSize = new SizeF((float)oldImage.Size.Width / percentageToFit, (float)oldImage.Size.Height / percentageToFit);
+            var newImage = oldImage.Scale(newSize);
+            return newImage.AsJPEG().AsStream();
+        }
+
         private string SetupNewSourcePath(string originalSourcePath, string removeFromOriginalSourceFilename, string addToFilename) {
             var orSourcePath = originalSourcePath;
             if (!string.IsNullOrEmpty(removeFromOriginalSourceFilename)) {
@@ -159,6 +230,8 @@ namespace Plugin.CropImage {
         }
 
       
+
+
         #endregion
     }
 }

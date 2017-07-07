@@ -22,3 +22,5 @@ In your App.Xaml.cs or somewhere before usage:
  
  var thumbnailPath = await Plugin.CropImage.CrossCropImage.Current.SmartCrop(file.Path, 60, 60, "-thumbnail-60x60", "-fullImage");
 ```
+
+  

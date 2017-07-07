@@ -1,7 +1,7 @@
 # Plugin.CropImage
 Crop those Images
 
-Right now it only works for android and iOS.
+Tested for Android iOS UWP
 
 In your App.Xaml.cs or somewhere before usage:
  ```Csharp

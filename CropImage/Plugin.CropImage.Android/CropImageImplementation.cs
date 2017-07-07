@@ -1,21 +1,14 @@
 using Android.Graphics;
-using Microsoft.ProjectOxford.Face.Contract;
 using Plugin.CropImage.Abstractions;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 using System;
+using System.IO;
+using System.Threading.Tasks;
 
-namespace Plugin.CropImage
-{
+namespace Plugin.CropImage {
     /// <summary>
     /// Implementation for Feature
     /// </summary>
-    public class CropImageImplementation : ICropImage
-    {
-
-        //public bool IsBusy {get;set;}
-
+    public class CropImageImplementation : ICropImage {
         /// <summary>
         /// Crops an image by the BoundingBox and returns in the size you specify.
         /// The new image will be saved on the device.
@@ -27,149 +20,27 @@ namespace Plugin.CropImage
         /// <param name="addToFilename">What string should be after the originalSourcePath. if original is img20161203.jpg and addToFileName is -thumbnail then the outcome will be img20161203-thumbnail.jpg</param>
         ///  /// <param name="removeFromOriginalSourceFilename">a string that should be removed from original source ex. originalSourcepath = "Image-fullImage.jpg"  removeFromOriginalSourceFilename = "-fullImage" the resulting path string will be "Image"+"addToFilename+".jpg"</param> 
         /// <returns>The path to the cropped image</returns>
-        async public Task<string> CropImage(string originalSourcePath, BoundingBox boundingBox, int width, int height, string addToFilename,string removeFromOriginalSourceFilename = null)
-        {
-           
-            
+        async public Task<string> CropImage(string originalSourcePath, BoundingBox boundingBox, int width, int height, string addToFilename, string removeFromOriginalSourceFilename = null) {
             string newPath = null;
+           var downSampledPath =await FixMaxImageSize(originalSourcePath, 4000000);
+            Bitmap originalImage = await LoadOriginalBitmap(downSampledPath);
+
+            var croppedBitmap = Bitmap.CreateBitmap(originalImage, boundingBox.Left, boundingBox.Top, boundingBox.Width, boundingBox.Height);
+
+            Bitmap resizedImage = Bitmap.CreateScaledBitmap(croppedBitmap, width, height, false);
+
+            byte[] compressed = CompressBitmap(resizedImage);
+
+            croppedBitmap.Recycle();
+            resizedImage.Recycle();
+            originalImage.Recycle();
+
+            newPath = SetupNewSourcePath(originalSourcePath, removeFromOriginalSourceFilename,addToFilename);
            
-
-            await Task.Run(async () =>
-            {
-                
-                var original = File.ReadAllBytes(originalSourcePath);
-                var originalImage = await BitmapFactory.DecodeByteArrayAsync(original, 0, original.Length);
-
-                var startX = boundingBox.Left;
-                var startY = boundingBox.Top;
-
-                var croppedBitmap = Bitmap.CreateBitmap(originalImage, startX, startY, boundingBox.Width, boundingBox.Height);
-
-                Bitmap resizedImage = Bitmap.CreateScaledBitmap(croppedBitmap, width, height, false);
-
-                byte[] resized = null;
-
-                using (MemoryStream ms = new MemoryStream())
-                {
-                    resizedImage.Compress(Bitmap.CompressFormat.Jpeg, 100, ms);
-                    resized = ms.ToArray();
-                }
-
-                croppedBitmap.Recycle();
-                resizedImage.Recycle();
-                originalImage.Recycle();
-
-                var orSourcePath = originalSourcePath;
-                if (!string.IsNullOrEmpty(removeFromOriginalSourceFilename))
-                {
-                  orSourcePath = orSourcePath.Replace(removeFromOriginalSourceFilename, "");
-                }
-
-                var extension = orSourcePath.Substring(orSourcePath.LastIndexOf("."));
-
-                newPath = orSourcePath.Replace(extension, addToFilename + extension);
-                File.WriteAllBytes(newPath, resized);
-            });
-
-
-          
-            return newPath;
-
-        }
-
-
-
-
-
-
-        /// <summary>
-        /// Crops an Image around faces, if there are any.
-        /// Remember to check internet connectivity otherwise will throw exception. 
-        /// </summary>
-        /// <param name="originalSourcePath">The original SourcePath to a file on Device</param>
-        /// <param name="width">Width of the cropped image</param>
-        /// <param name="height">Height of the cropped image</param>
-        /// <param name="addToFilename">What string should be after the originalSourcePath. if original is img20161203.jpg and addToFileName is -thumbnail then the outcome will be img20161203-thumbnail.jpg</param>
-        /// <param name="removeFromOriginalSourceFilename">a string that should be removed from original source ex. originalSourcepath = "Image-fullImage.jpg"  removeFromOriginalSourceFilename = "-fullImage" the resulting path string will be "Image"+"addToFilename+".jpg"</param> 
-        /// <param name="extraAroundFaceRectangle">Face api returns a rectangle of the face this adds extra space around that</param>
-        /// <returns>Path of the new Image File</returns>
-        async public Task<string> CropImageFace(string originalSourcePath, int width, int height, string addToFilename,string removeFromOriginalSourceFilename, int extraAroundFaceRectangle = 30)
-        {
-            string newPath = null;
-
-
-            await Task.Run(async () =>
-            {
-                bool hasFaceValue;
-                FaceRectangle faceRectangle = await GetFaceRectangle(originalSourcePath);
-                hasFaceValue = faceRectangle != null ? true : false;
-
-                var original = File.ReadAllBytes(originalSourcePath);
-                var originalImage = await BitmapFactory.DecodeByteArrayAsync(original, 0, original.Length);
-
-                var x = 0;
-                var y = 0;
-                var faceWidth = originalImage.Width;
-                var faceHeight = originalImage.Height;
-
-                if (hasFaceValue)
-                {
-                    x = faceRectangle.Left;
-                    y = faceRectangle.Top;
-                    faceWidth = faceRectangle.Width;
-                    faceHeight = faceRectangle.Height;
-
-                    if (IsOkExtraAroundCropping(originalImage, extraAroundFaceRectangle, faceRectangle))
-                    {
-                        x -= extraAroundFaceRectangle;
-                        y += extraAroundFaceRectangle;
-                        faceWidth += extraAroundFaceRectangle;
-                        faceHeight -= extraAroundFaceRectangle;
-                    }
-                }
-                var box = new BoundingBox { Left = x, Top = y, Width = faceWidth, Height = faceHeight };
-                newPath = await CropImage(originalSourcePath, box, width, height, addToFilename,removeFromOriginalSourceFilename);
-            });
-
-
+            File.WriteAllBytes(newPath, compressed);
 
             return newPath;
 
-        }
-
-        private bool IsOkExtraAroundCropping(Bitmap originalImage, int extraAroundFaceRectangle, FaceRectangle face)
-        {
-            var maxWidth = originalImage.Width;
-            var maxHeight = originalImage.Height;
-            if (face.Left - extraAroundFaceRectangle < 0
-                || (face.Left + face.Width + extraAroundFaceRectangle) > maxWidth
-                || face.Top - extraAroundFaceRectangle > maxHeight
-                || (face.Top - extraAroundFaceRectangle) < 0
-                )
-            {
-                return false;
-            }
-            return true;
-        }
-
-        async private Task<FaceRectangle> GetFaceRectangle(string sourcePath)
-        {
-            using (Stream imageFileStream = File.OpenRead(sourcePath))
-            {
-                var faces = await FaceApi.FaceService.DetectAsync(imageFileStream);
-                var faceRects = faces.Select(face => face.FaceRectangle);
-                var faceArray = faceRects.ToArray();
-
-                switch (faceArray.Length)
-                {
-                    case 0:
-                        return null;
-                    case 1:
-                        return faceArray[0];
-                    default:
-                        return null;
-                }
-            }
         }
 
         /// <summary>
@@ -181,97 +52,199 @@ namespace Plugin.CropImage
         /// <param name="addToFilename">What string should be after the originalSourcePath. if original is img20161203.jpg and addToFileName is -thumbnail then the outcome will be img20161203-thumbnail.jpg</param>
         /// <param name="removeFromOriginalSourceFilename">a string that should be removed from original source ex. originalSourcepath = "Image-fullImage.jpg"  removeFromOriginalSourceFilename = "-fullImage" the resulting path string will be "Image"+"addToFilename+".jpg"</param>
         /// <returns></returns>
-        async public Task<string> SmartCrop(string originalSourcePath, int width, int height, string addToFilename, string removeFromOriginalSourceFilename = null)
-        {
+        async public Task<string> SmartCrop(string originalSourcePath, int width, int height, string addToFilename, string removeFromOriginalSourceFilename = null) {
             string newPath = null;
-           if (string.IsNullOrEmpty(VisionApi.Key))
-            {
-                throw new Exception("You must set VisionApi.Key");
+            byte[] thumbNailByteArray = null;
+            if (originalSourcePath.IsUrl()) {
+                thumbNailByteArray = await VisionApi.GetThumbNail(originalSourcePath, width, height);
             }
-
-            var originalBytes = File.ReadAllBytes(originalSourcePath);
-
-            var thumbNailByteArray = await VisionApi.GetThumbNail(originalBytes, VisionApi.Key, width, height);
-
-            var orSourcePath = originalSourcePath;
-            if (!string.IsNullOrEmpty(removeFromOriginalSourceFilename))
-            {
-                orSourcePath = orSourcePath.Replace(removeFromOriginalSourceFilename, "");
+            else {
+                var downSampledPath = await FixMaxImageSize(originalSourcePath, 4000000);
+                var originalBytes = File.ReadAllBytes(downSampledPath);
+                thumbNailByteArray = await VisionApi.GetThumbNail(originalBytes, width, height);
             }
-
-            var extension = orSourcePath.Substring(orSourcePath.LastIndexOf("."));
-
-            newPath = orSourcePath.Replace(extension, addToFilename + extension);
+            newPath = SetupNewSourcePath(originalSourcePath, removeFromOriginalSourceFilename, addToFilename);
 
             File.WriteAllBytes(newPath, thumbNailByteArray);
 
             return newPath;
         }
 
-        //private FaceRectangle CalculateFacesRect(FaceRectangle[] faceArray)
-        //{
-
-        //var faceRectangle = new FaceRectangle();
-        //var left = 10000;
-        //var top = 0;
-        //var rightMax = 0;
-        //var minBottom = 10000;
-
-        //foreach (var face in faceArray)
-        //{
-
-        //    if (face.Left < left)
-        //    {
-        //        left = face.Left;
-        //    }
-
-        //    if (rightMax < (face.Left + face.Width))
-        //    {
-        //        rightMax = face.Left + face.Width;
-        //    }
-
-
-        //    if (face.Top > top)
-        //    {
-        //        top = face.Top;
-        //    }
-
-        //    if (face.Top - face.Height < minBottom)
-        //    {
-        //        minBottom = face.Top - face.Height;
-        //    }
-
-        //}
-        //faceRectangle.Left = left;
-        //faceRectangle.Top = top;
+        /// <summary>
+        /// Uses the Microsoft Vision API to generate a picture that crops automatically to whatever size you choose.
+        /// </summary>
+        /// <param name="originalSourcePath">The original SourcePath to a file on Device OR An url to a picture</param>
+        /// <param name="width">Width of the cropped image</param>
+        /// <param name="height">Height of the cropped image</param>
+        /// <returns>Byte array of new image</returns>
+        async public Task<byte[]> SmartCrop(string originalSourcePath, int width, int height) {
+            
+            if (originalSourcePath.IsUrl()) {
+                return await VisionApi.GetThumbNail(originalSourcePath, width, height);
+                
+            }
+            else          
+            {
+                var downSampledPath = await FixMaxImageSize(originalSourcePath, 4000000);
+               var originalBytes = File.ReadAllBytes(downSampledPath);
+                return await VisionApi.GetThumbNail(originalBytes, width, height);
+            }                      
+        }
 
 
-        //faceRectangle.Width = rightMax;
-        //faceRectangle.Height = rightMax;
+        /// <summary>
+        /// Uses the Microsoft Vision API to generate a picture that crops automatically to whatever size you choose.
+        /// </summary>
+        /// <param name="stream">Stream of an image that is used to send to Vision api</param>
+        /// <param name="width">Width of the cropped image</param>
+        /// <param name="height">Height of the cropped image</param>
+        /// <returns>Byte array of new image</returns>
+        async public Task<byte[]> SmartCrop(Stream stream, int width, int height) {
+            if (stream.Length > 4000000) {
+                throw new NotSupportedException("You are trying to SmartCrop a Stream that is bigger than 4Mb");
+            }
+            return await VisionApi.GetThumbNail(stream.ToByteArray(), width, height);
+        }
 
-        //return faceRectangle;
-        //}
+        /// <summary>
+        /// Uses the Microsoft Vision API to generate a picture that crops automatically to whatever size you choose.
+        /// </summary>
+        /// <param name="stream">Stream of an image that is used to send to Vision api</param>
+        /// <param name="width">Width of the cropped image</param>
+        /// <param name="height">Height of the cropped image</param>
+        /// <param name="newFilePath">path to file that is going to be created</param>
+        /// <returns>The path to the cropped image</returns>
+        async public Task<string> SmartCrop(Stream stream, int width, int height, string newFilePath) {
+            if (stream.Length > 4000000) {
+                throw new NotSupportedException("You are trying to SmartCrop a Stream that is bigger than 4Mb");
+            }
+            var thumbNailByteArray = await VisionApi.GetThumbNail(stream.ToByteArray(), width, height);
+            File.WriteAllBytes(newFilePath, thumbNailByteArray);
+            return newFilePath;
+        }
+        /// <summary>
+        /// Checks if size of file is bigger than given maxBytes. If so it downsamples the image to the size of maxBytes.
+        /// </summary>
+        /// <param name="filePath">Path to file</param>
+        /// <param name="maxBytes">Max aloud bytes</param>
+        /// <returns>Path to file under given maxBytes or the filePath if filesize was smaller than given maxBytes</returns>
+        async public Task<string> FixMaxImageSize(string filePath, long maxBytes) {
+            FileInfo info = new FileInfo(filePath);
 
-        //async public Task<string[]> CreateMediumAndLowResolutionPicturesOf(string sourceImagePath)
-        //{
-        //    string mediumPath = null, smallPath = null;
+            var length = info.Length;
+            if (length > maxBytes) {
+                var originalBitmap = await DecodeSampledBitmapFromFile(filePath, 500, 500);              
+                byte[] compressed = CompressBitmap(originalBitmap);
+                var newPath = SetupNewSourcePath(filePath, "", "-smallerCopy");
+                File.WriteAllBytes(newPath, compressed);
+                originalBitmap.Recycle();
+                return newPath;
+            }
+            return filePath;
+        }
 
-        //    await Task.Run(() =>
-        //    {
-        //        var extension = sourceImagePath.Substring(sourceImagePath.LastIndexOf("."));
 
-        //        byte[] originalImage = File.ReadAllBytes(sourceImagePath);
+        /// <summary>
+        /// Checks if size of file is bigger than given maxBytes. If so it downsamples the image to the size of maxBytes.
+        /// </summary>
+        /// <param name="stream">Stream </param>
+        /// <param name="maxBytes">Max aloud bytes</param>
+        /// <returns>Byte array of stream under given maxBytes, or the byte array of original stream if stream length was smaller than given maxBytes</returns>
+        async public Task<byte[]> FixMaxImageSize(Stream stream, long maxBytes) {   
+            var length = stream.Length;
+            if (length > maxBytes) {
+                var originalBitmap = await DecodeSampledBitmapFromBytes(stream.ToByteArray(), 500, 500);                
+                originalBitmap.Recycle();             
+                return CompressBitmap(originalBitmap);
+            }
+            return stream.ToByteArray();
+        }
 
-        //        byte[] medium = ImageResizer.ResizeImageToMedium(originalImage);
-        //        mediumPath = sourceImagePath.Replace(extension, "-medium" + extension);
-        //        File.WriteAllBytes(mediumPath, medium);
+        #region Private Methods
+        private Bitmap ResizeBitmap(Bitmap originalBitmap, long maxBytes) {
+            var percentageToFit = (float)originalBitmap.ByteCount / maxBytes;
+            return Bitmap.CreateScaledBitmap(originalBitmap, (int)(originalBitmap.Width / percentageToFit), (int)(originalBitmap.Height / percentageToFit), false);
+        }
 
-        //        byte[] small = ImageResizer.ResizeImageToSmall(originalImage);
-        //        smallPath = sourceImagePath.Replace(extension, "-small" + extension);
-        //        File.WriteAllBytes(smallPath, small);
-        //    });
-        //    return new string[] { mediumPath, smallPath };
+        private string SetupNewSourcePath(string originalSourcePath, string removeFromOriginalSourceFilename, string addToFilename) {
+            var orSourcePath = originalSourcePath;
+            if (!string.IsNullOrEmpty(removeFromOriginalSourceFilename)) {
+                orSourcePath = orSourcePath.Replace(removeFromOriginalSourceFilename, "");
+            }
 
-        //}
+            var extension = orSourcePath.Substring(orSourcePath.LastIndexOf("."));
+            return orSourcePath.Replace(extension, addToFilename + extension);
+        }
+
+        async private Task<Bitmap> LoadOriginalBitmap(string originalSourcePath) {
+           await  FixMaxImageSize(originalSourcePath, 4000000);
+            var original = File.ReadAllBytes(originalSourcePath);
+            return await BitmapFactory.DecodeByteArrayAsync(original, 0, original.Length);
+        }
+
+        private byte[] CompressBitmap(Bitmap bitmap) {
+            byte[] compressed = null;
+            using (MemoryStream ms = new MemoryStream()) {
+                bitmap.Compress(Bitmap.CompressFormat.Jpeg, 100, ms);
+                compressed = ms.ToArray();
+            }
+            return compressed;
+        }
+
+        private  int CalculateInSampleSize(
+             BitmapFactory.Options options, int reqWidth, int reqHeight) {
+            // Raw height and width of image
+             int height = options.OutHeight;
+           int width = options.OutWidth;
+            int inSampleSize = 1;
+
+            if (height > reqHeight || width > reqWidth) {
+
+                 int halfHeight = height / 2;
+                 int halfWidth = width / 2;
+
+                // Calculate the largest inSampleSize value that is a power of 2 and keeps both
+                // height and width larger than the requested height and width.
+                while ((halfHeight / inSampleSize) >= reqHeight
+                        && (halfWidth / inSampleSize) >= reqWidth) {
+                    inSampleSize *= 2;
+                }
+            }
+
+            return inSampleSize;
+        }
+
+       async private Task<Bitmap> DecodeSampledBitmapFromFile(string path,int reqWidth, int reqHeight) {
+
+            // First decode with inJustDecodeBounds=true to check dimensions
+             BitmapFactory.Options options = new BitmapFactory.Options();
+            options.InJustDecodeBounds = true;
+            await BitmapFactory.DecodeFileAsync(path,options);
+           
+            // Calculate inSampleSize
+            options.InSampleSize = CalculateInSampleSize(options, reqWidth, reqHeight);
+
+            // Decode bitmap with inSampleSize set
+            options.InJustDecodeBounds = false;
+            return await BitmapFactory.DecodeFileAsync(path,options);
+        }
+
+        async private Task<Bitmap> DecodeSampledBitmapFromBytes(byte[] bytes, int reqWidth, int reqHeight) {
+
+            // First decode with inJustDecodeBounds=true to check dimensions
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.InJustDecodeBounds = true;
+            await BitmapFactory.DecodeByteArrayAsync(bytes,0,bytes.Length,options);
+
+            // Calculate inSampleSize
+            options.InSampleSize = CalculateInSampleSize(options, reqWidth, reqHeight);
+
+            // Decode bitmap with inSampleSize set
+            options.InJustDecodeBounds = false;
+            return await BitmapFactory.DecodeByteArrayAsync(bytes,0,bytes.Length, options);
+        }
+        #endregion
+
+
     }
 }
